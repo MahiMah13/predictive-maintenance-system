@@ -6,7 +6,7 @@ node_modules/
 .yarn/
 .pnpm-store/
 
-# Environment Variables & Secrets (Preserve .env.example templates)
+# Environment Variables & Secrets (Keep .env.example templates)
 .env
 .env.local
 .env.development.local
@@ -15,10 +15,7 @@ node_modules/
 *.env
 !*.env.example
 
-# Database Files, Dumps, Schemas & Migrations
-database/
-supabase/
-*.sql
+# Local Binary Database Files, Dumps & Backups (SQL migration scripts remain version-controlled)
 *.db
 *.sqlite
 *.sqlite3
