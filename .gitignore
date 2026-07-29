@@ -15,7 +15,10 @@ node_modules/
 *.env
 !*.env.example
 
-# Database Files, Dumps & Local Data
+# Database Files, Dumps, Schemas & Migrations
+database/
+supabase/
+*.sql
 *.db
 *.sqlite
 *.sqlite3
