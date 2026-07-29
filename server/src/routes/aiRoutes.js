@@ -15,10 +15,10 @@ const router = express.Router();
 
 const aiRateLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 20, // max 20 AI triggers per 10 min window
+  max: process.env.NODE_ENV === 'production' ? 100 : 500,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "AI rate limit exceeded. Please wait 10 minutes before generating additional AI analyses." }
+  message: { error: "AI rate limit exceeded. Please wait a few minutes before generating additional AI analyses." }
 });
 
 router.post('/assets/:id/failure-prediction', authenticateToken, aiRateLimiter, triggerFailurePrediction);

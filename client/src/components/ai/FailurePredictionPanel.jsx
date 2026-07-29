@@ -1,16 +1,43 @@
 import React from 'react';
 import ConfidenceBadge from './ConfidenceBadge';
-import { AlertOctagon, Activity, Database, Sparkles, ArrowRight } from 'lucide-react';
+import { AlertOctagon, Activity, Database, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
 
-export default function FailurePredictionPanel({ prediction, onGenerateRecommendations }) {
+export default function FailurePredictionPanel({ 
+  prediction, 
+  onRunPrediction, 
+  onGenerateRecommendations,
+  isAnalyzing = false 
+}) {
   if (!prediction) {
     return (
-      <div className="glass-panel p-8 rounded-2xl text-center">
-        <Sparkles className="w-10 h-10 text-accent-cyan mx-auto mb-3 animate-pulse" />
-        <h3 className="text-lg font-bold text-white mb-2">No Active Prediction Loaded</h3>
-        <p className="text-xs text-gray-400 max-w-md mx-auto">
-          Click the "Run Failure Prediction" button to send sensor feeds and failure logs to Gemini 2.5 for reliability analysis.
-        </p>
+      <div className="glass-panel p-8 rounded-2xl text-center space-y-4">
+        <Sparkles className="w-10 h-10 text-accent-cyan mx-auto mb-1 animate-pulse" />
+        <div>
+          <h3 className="text-lg font-bold text-white mb-1">No Active Prediction Loaded</h3>
+          <p className="text-xs text-gray-400 max-w-md mx-auto">
+            Send sensor telemetry, operational parameters, and historical failure logs to Gemini 2.5 for AI reliability analysis.
+          </p>
+        </div>
+
+        {onRunPrediction && (
+          <button
+            onClick={onRunPrediction}
+            disabled={isAnalyzing}
+            className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-accent-cyan to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-6 py-3 rounded-xl text-xs shadow-xl shadow-accent-cyan/20 transition-all hover:scale-105 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isAnalyzing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Running Gemini Failure Analysis...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                <span>Generate Gemini Failure Prediction</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
     );
   }
@@ -34,14 +61,29 @@ export default function FailurePredictionPanel({ prediction, onGenerateRecommend
           </p>
         </div>
 
-        <button
-          onClick={onGenerateRecommendations}
-          className="flex items-center justify-center gap-2 bg-gradient-to-r from-accent-cyan to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-lg shadow-accent-cyan/20 transition-all hover:scale-105"
-        >
-          <Sparkles className="w-4 h-4" />
-          Generate Action Plan
-          <ArrowRight className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-3">
+          {onRunPrediction && (
+            <button
+              onClick={onRunPrediction}
+              disabled={isAnalyzing}
+              className="flex items-center justify-center gap-2 bg-industrial-800 hover:bg-industrial-700 text-gray-200 font-semibold px-4 py-2.5 rounded-xl text-xs border border-industrial-border transition-all cursor-pointer disabled:opacity-60"
+            >
+              <Sparkles className="w-4 h-4 text-accent-cyan" />
+              <span>{isAnalyzing ? 'Analyzing...' : 'Re-Run Analysis'}</span>
+            </button>
+          )}
+
+          {onGenerateRecommendations && (
+            <button
+              onClick={onGenerateRecommendations}
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-accent-cyan to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-lg shadow-accent-cyan/20 transition-all hover:scale-105 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Generate Action Plan</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

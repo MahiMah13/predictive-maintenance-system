@@ -275,7 +275,11 @@ export default function AssetDetailPage() {
 
           {activeTab === 'ai' && (
             <div className="space-y-6">
-              <FailurePredictionPanel prediction={prediction} onGenerateRecommendations={handleGenerateRecommendations} />
+              <FailurePredictionPanel 
+                prediction={prediction} 
+                onRunPrediction={handleRunPrediction}
+                onGenerateRecommendations={handleGenerateRecommendations} 
+              />
               <RULEstimatePanel rulData={rul} />
               {recommendations && (
                 <RecommendationList

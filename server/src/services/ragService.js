@@ -1,16 +1,30 @@
 import ai, { GEMINI_MODEL } from "./geminiClient.js";
 import store from "./store.js";
 
+const SYSTEM_INSTRUCTION = `You are an AI Industrial Reliability & Maintenance Engineer embedded in a manufacturing plant platform.
+Your expertise is strictly in industrial machinery, predictive maintenance, OEM equipment manuals, telemetry diagnostics, and work orders.
+
+Handling Guidelines:
+1. If the user asks a technical or plant-related question (e.g. vibration, bearings, pumps, compressors, work orders, LOTO, oil analysis, predictive maintenance, asset health):
+   - Answer technical troubleshooting steps grounded in the provided document context and asset history.
+   - Include specific technical parameters (ISO 10816 limits, temperature limits, LOTO safety).
+2. If the user asks an off-topic question unrelated to industrial equipment, maintenance, or reliability engineering (e.g. weather, recipes, sports, general entertainment):
+   - Politely explain that you are an AI Industrial Reliability Engineer specialized in manufacturing equipment diagnostics, maintenance schedules, and OEM technical documentation.
+   - Offer to help them troubleshoot plant machinery, analyze sensor telemetry, or query equipment manuals instead.`;
+
 export async function askAIMaintenanceEngineer(question, assetId = null) {
-  // Retrieve relevant knowledge documents based on keyword matching / vector embedding simulation
-  const docs = store.knowledge_documents.filter(d => {
+  // Extract keywords (length > 3)
+  const queryWords = question.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+
+  // Match knowledge documents by relevance
+  const matchingDocs = store.knowledge_documents.filter(d => {
     if (assetId && d.asset_id && d.asset_id !== assetId) return false;
     const text = (d.title + " " + d.content_text).toLowerCase();
-    const queryWords = question.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-    return queryWords.some(word => text.includes(word)) || !assetId;
+    return queryWords.some(word => text.includes(word));
   });
 
-  const retrievedSources = docs.slice(0, 3).map(d => ({
+  // Only attach retrieved sources if there is a real keyword match
+  const retrievedSources = matchingDocs.slice(0, 3).map(d => ({
     title: d.title,
     document_type: d.document_type,
     storage_path: d.storage_path,
@@ -19,7 +33,7 @@ export async function askAIMaintenanceEngineer(question, assetId = null) {
 
   const contextText = retrievedSources.length > 0
     ? retrievedSources.map(s => `[Document: ${s.title}]\n${s.snippet}`).join("\n\n")
-    : "No specific OEM document matched. Referencing general industrial reliability standards (ISO 10816 / ISO 14224).";
+    : "No specific OEM document matched.";
 
   let assetContext = "";
   if (assetId) {
@@ -30,7 +44,7 @@ export async function askAIMaintenanceEngineer(question, assetId = null) {
   }
 
   const prompt = `
-  You are an expert AI Maintenance Engineer in a manufacturing plant. Answer the maintenance/troubleshooting question grounded strictly in the provided document context and asset history.
+  SYSTEM INSTRUCTION: ${SYSTEM_INSTRUCTION}
 
   Context Documents:
   ${contextText}
@@ -38,8 +52,6 @@ export async function askAIMaintenanceEngineer(question, assetId = null) {
   ${assetContext}
 
   User Question: ${question}
-
-  Formulate a clear, technical, step-by-step response. Cite documents where relevant.
   `;
 
   if (ai) {
@@ -60,7 +72,18 @@ export async function askAIMaintenanceEngineer(question, assetId = null) {
     }
   }
 
-  // Structured Fallback Answer with exact citations
+  // Detect off-topic queries in fallback mode
+  const offTopicKeywords = ['weather', 'climate', 'temperature outside', 'rain', 'forecast', 'recipe', 'game', 'sports', 'movie', 'news'];
+  const isOffTopic = offTopicKeywords.some(kw => question.toLowerCase().includes(kw));
+
+  if (isOffTopic) {
+    return {
+      answer: `I am an AI Industrial Maintenance & Reliability Engineer specialized in manufacturing equipment diagnostics, OEM technical manuals, and predictive maintenance.\n\nI don't have access to general weather forecasts or non-industrial topics, but I can help you analyze telemetry readings, troubleshoot asset failure modes, estimate RUL, or look up OEM maintenance specs for your plant equipment!`,
+      retrieved_sources: []
+    };
+  }
+
+  // Structured Fallback Answer for plant machinery queries
   let fallbackAnswer = `Based on plant knowledge documents and reliability standards:\n\n` +
     `1. **Diagnostic Evaluation**: The reported condition for ${assetId ? 'the selected asset' : 'the plant equipment'} indicates mechanical or operating strain. ` +
     `Check vibration spectra for 1X rotational unbalance and 2X alignment harmonics.\n` +
@@ -70,8 +93,6 @@ export async function askAIMaintenanceEngineer(question, assetId = null) {
 
   return {
     answer: fallbackAnswer,
-    retrieved_sources: retrievedSources.length > 0 ? retrievedSources : [
-      { title: "Plant Reliability Best Practices Handbook", document_type: "manual", storage_path: "/docs/reliability_guide.pdf", snippet: "Vibration limits according to ISO 10816 Class III machinery guidelines." }
-    ]
+    retrieved_sources: retrievedSources
   };
 }
