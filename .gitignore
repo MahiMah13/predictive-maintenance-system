@@ -15,6 +15,18 @@ node_modules/
 *.env
 !*.env.example
 
+# Database Files, Dumps & Local Data
+*.db
+*.sqlite
+*.sqlite3
+*.rdb
+*.dump
+*.sql.gz
+*.bak
+database/dumps/
+database/data/
+database/local/
+
 # Production Build Outputs
 dist/
 build/
