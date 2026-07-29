@@ -6,7 +6,7 @@ node_modules/
 .yarn/
 .pnpm-store/
 
-# Environment Variables & Secrets (Keep .env.example templates)
+# Environment Variables & Secrets (Preserve .env.example templates)
 .env
 .env.local
 .env.development.local
