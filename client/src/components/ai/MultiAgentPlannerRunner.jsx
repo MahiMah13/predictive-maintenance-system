@@ -1,13 +1,25 @@
 import React from 'react';
-import { Workflow, CheckCircle2, AlertTriangle, Calendar, Package, Sparkles, Layers, ShieldCheck } from 'lucide-react';
+import { Workflow, CheckCircle2, AlertTriangle, Calendar, Package, Sparkles, ShieldCheck, Download, Printer } from 'lucide-react';
+import { generatePDFReport } from '../../utils/PDFReportGenerator';
+import { useAuth } from '../../context/AuthContext';
 
 export default function MultiAgentPlannerRunner({ planRun, onTriggerPlanner, isRunning = false }) {
+  const { organization } = useAuth() || {};
+
   const steps = [
     { id: 1, title: 'Diagnostics Agent', key: 'diagnostics_output', icon: AlertTriangle, desc: 'Failure mode & telemetry diagnostics' },
     { id: 2, title: 'Risk Agent', key: 'risk_output', icon: ShieldCheck, desc: 'Criticality & downtime financial ranking' },
     { id: 3, title: 'Scheduling Agent', key: 'scheduling_output', icon: Calendar, desc: 'Optimal work window & crew assignment' },
     { id: 4, title: 'Parts Agent', key: 'parts_output', icon: Package, desc: 'Spare parts bill-of-materials & lead time' },
   ];
+
+  const handleExportPDF = () => {
+    generatePDFReport(
+      planRun?.final_plan?.plan_title || 'Fleet Master Predictive Maintenance Strategy Report',
+      planRun?.final_plan,
+      organization?.name || 'Apex Precision Manufacturing Inc.'
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -23,18 +35,30 @@ export default function MultiAgentPlannerRunner({ planRun, onTriggerPlanner, isR
           </p>
         </div>
 
-        <button
-          onClick={onTriggerPlanner}
-          disabled={isRunning}
-          className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-xs shadow-xl transition-all ${
-            isRunning
-              ? 'bg-industrial-700 text-gray-400 cursor-not-allowed'
-              : 'bg-gradient-to-r from-accent-cyan to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-accent-cyan/20 hover:scale-105 cursor-pointer'
-          }`}
-        >
-          <Sparkles className={`w-4 h-4 ${isRunning ? 'animate-spin' : ''}`} />
-          {isRunning ? 'Orchestrating Agents...' : 'Execute Fleet Multi-Agent Planner'}
-        </button>
+        <div className="flex items-center gap-3">
+          {planRun?.final_plan && (
+            <button
+              onClick={handleExportPDF}
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-industrial-800 hover:bg-industrial-700 text-gray-200 border border-industrial-border rounded-xl font-bold text-xs transition-all cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-accent-cyan" />
+              <span>Export Official PDF Report</span>
+            </button>
+          )}
+
+          <button
+            onClick={onTriggerPlanner}
+            disabled={isRunning}
+            className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-xs shadow-xl transition-all ${
+              isRunning
+                ? 'bg-industrial-700 text-gray-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-accent-cyan to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-accent-cyan/20 hover:scale-105 cursor-pointer'
+            }`}
+          >
+            <Sparkles className={`w-4 h-4 ${isRunning ? 'animate-spin' : ''}`} />
+            {isRunning ? 'Orchestrating Agents...' : 'Execute Fleet Multi-Agent Planner'}
+          </button>
+        </div>
       </div>
 
       {/* Stepper Steps Display */}
@@ -77,7 +101,7 @@ export default function MultiAgentPlannerRunner({ planRun, onTriggerPlanner, isR
       {/* Consolidated Master Plan */}
       {planRun?.final_plan && (
         <div className="glass-panel-glow p-6 rounded-2xl border border-accent-cyan/40 space-y-5">
-          <div className="flex items-center justify-between border-b border-industrial-border pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-industrial-border pb-4">
             <div>
               <span className="text-[10px] text-accent-cyan font-mono uppercase font-bold tracking-wider">
                 CONSOLIDATED MASTER PLAN
@@ -96,6 +120,13 @@ export default function MultiAgentPlannerRunner({ planRun, onTriggerPlanner, isR
                 <span className="text-gray-400">Avoided Downtime ROI: </span>
                 <span className="text-emerald-400 font-bold">${planRun.final_plan.projected_roi_usd || '69,225'}</span>
               </div>
+              <button
+                onClick={handleExportPDF}
+                className="flex items-center gap-1 px-3 py-1.5 bg-accent-cyan text-industrial-900 font-bold rounded-lg hover:bg-cyan-300 transition-colors cursor-pointer text-xs"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>PDF Sign-Off</span>
+              </button>
             </div>
           </div>
 

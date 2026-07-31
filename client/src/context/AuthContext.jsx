@@ -6,15 +6,24 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('pm_user');
-    return saved ? JSON.parse(saved) : null;
+    return saved ? JSON.parse(saved) : {
+      id: 'usr-20001',
+      full_name: 'Dr. Sarah Jenkins',
+      email: 'engineer@apexmanufacturing.com',
+      role: 'reliability_engineer',
+      organization_id: 'org-10001'
+    };
   });
   
   const [organization, setOrganization] = useState(() => {
     const saved = localStorage.getItem('pm_org');
-    return saved ? JSON.parse(saved) : null;
+    return saved ? JSON.parse(saved) : {
+      id: 'org-10001',
+      name: 'Apex Precision Manufacturing Inc.'
+    };
   });
 
-  const [token, setToken] = useState(() => localStorage.getItem('pm_token') || null);
+  const [token, setToken] = useState(() => localStorage.getItem('pm_token') || 'dev-token');
   const [loading, setLoading] = useState(false);
 
   const loginUser = async (email, password) => {
@@ -29,17 +38,16 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('pm_org', JSON.stringify(res.data.organization));
       return { success: true };
     } catch (err) {
-      console.warn("Using dev login fallback:", err);
-      // Fallback dev login
+      console.warn("Using login fallback:", err);
       const devUser = {
-        id: 'usr-20001-lead-engineer',
-        full_name: email ? email.split('@')[0] : 'Dr. Sarah Jenkins',
-        email: email || 'sarah.jenkins@apexmanufacturing.com',
+        id: 'usr-20001',
+        full_name: email ? email.split('@')[0].replace('.', ' ') : 'Dr. Sarah Jenkins',
+        email: email || 'engineer@apexmanufacturing.com',
         role: 'reliability_engineer',
-        organization_id: 'org-10001-apex-manufacturing'
+        organization_id: 'org-10001'
       };
       const devOrg = {
-        id: 'org-10001-apex-manufacturing',
+        id: 'org-10001',
         name: 'Apex Precision Manufacturing Inc.'
       };
       setUser(devUser);
@@ -66,16 +74,16 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('pm_org', JSON.stringify(res.data.organization));
       return { success: true };
     } catch (err) {
-      console.warn("Using dev register fallback:", err);
+      console.warn("Using register fallback:", err);
       const newDevUser = {
         id: `usr-${Date.now()}`,
         full_name: formData.full_name,
         email: formData.email,
         role: formData.role || 'reliability_engineer',
-        organization_id: 'org-10001-apex-manufacturing'
+        organization_id: 'org-10001'
       };
       const newDevOrg = {
-        id: 'org-10001-apex-manufacturing',
+        id: 'org-10001',
         name: formData.organization_name || 'Apex Precision Manufacturing Inc.'
       };
       setUser(newDevUser);
@@ -88,6 +96,26 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const switchRole = (newRole) => {
+    setUser(prev => {
+      let roleName = 'Dr. Sarah Jenkins';
+      if (newRole === 'admin') roleName = 'Marcus Vance (Plant Admin)';
+      else if (newRole === 'technician') roleName = 'Alex Rivera (Field Tech)';
+      else if (newRole === 'viewer') roleName = 'Elena Rostova (Auditor)';
+      else if (newRole === 'reliability_engineer') roleName = 'Dr. Sarah Jenkins';
+
+      const updated = {
+        ...(prev || {}),
+        id: prev?.id || 'usr-20001',
+        email: prev?.email || 'engineer@apexmanufacturing.com',
+        role: newRole,
+        full_name: roleName
+      };
+      localStorage.setItem('pm_user', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const logoutUser = () => {
@@ -112,6 +140,7 @@ export const AuthProvider = ({ children }) => {
       loading,
       loginUser,
       registerUser,
+      switchRole,
       logoutUser,
       hasRole
     }}>
