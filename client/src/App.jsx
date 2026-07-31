@@ -22,6 +22,44 @@ import ProfilePage from './pages/ProfilePage';
 
 const queryClient = new QueryClient();
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-industrial-900 text-white flex flex-col items-center justify-center p-6 text-center">
+          <div className="max-w-md bg-industrial-800 p-8 rounded-3xl border border-industrial-border space-y-4 shadow-2xl">
+            <h2 className="text-xl font-bold text-accent-cyan">Plant View Recovery</h2>
+            <p className="text-xs text-gray-300">The application encountered a transient render condition.</p>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false });
+                window.location.href = '/dashboard';
+              }}
+              className="px-6 py-2.5 bg-gradient-to-r from-accent-cyan to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-accent-cyan/20 cursor-pointer"
+            >
+              Return to Dashboard
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
   if (!user) {
@@ -73,7 +111,9 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter>
-          <AppRoutes />
+          <ErrorBoundary>
+            <AppRoutes />
+          </ErrorBoundary>
         </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>

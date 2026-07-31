@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../components/shared/Navbar';
 import Sidebar from '../components/shared/Sidebar';
 import { maintenanceAPI } from '../services/api';
-import { Calendar, ClipboardList, Clock, Plus, Filter, CheckCircle2, User, ArrowUpRight } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function MaintenanceSchedulePage() {
@@ -17,14 +17,16 @@ export default function MaintenanceSchedulePage() {
           maintenanceAPI.getWorkOrders({ status: statusFilter }),
           maintenanceAPI.getSchedules()
         ]);
-        setWorkOrders(woRes.data);
-        setSchedules(schedRes.data);
+        setWorkOrders(Array.isArray(woRes?.data) ? woRes.data : []);
+        setSchedules(Array.isArray(schedRes?.data) ? schedRes.data : []);
       } catch (err) {
         console.warn("Error loading schedule data:", err);
       }
     }
     loadSchedules();
   }, [statusFilter]);
+
+  const safeWorkOrders = Array.isArray(workOrders) ? workOrders.filter(Boolean) : [];
 
   return (
     <div className="min-h-screen bg-industrial-900 flex flex-col">
@@ -59,53 +61,56 @@ export default function MaintenanceSchedulePage() {
           {/* Work Orders List */}
           <div className="glass-panel p-6 rounded-2xl border border-industrial-border space-y-4">
             <h3 className="text-sm font-bold text-white flex items-center justify-between">
-              <span>Active Work Orders ({workOrders.length})</span>
+              <span>Active Work Orders ({safeWorkOrders.length})</span>
             </h3>
 
             <div className="space-y-3">
-              {workOrders.map((wo) => (
-                <div
-                  key={wo.id}
-                  className="bg-industrial-900/90 p-4 rounded-xl border border-industrial-border hover:border-accent-cyan/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-accent-cyan font-bold text-xs">{wo.id}</span>
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${
-                        wo.priority === 'critical' ? 'bg-rose-500/20 text-rose-400 border-rose-500/40' : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+              {safeWorkOrders.map((wo) => {
+                const statusStr = wo.status || 'scheduled';
+                return (
+                  <div
+                    key={wo.id}
+                    className="bg-industrial-900/90 p-4 rounded-xl border border-industrial-border hover:border-accent-cyan/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-accent-cyan font-bold text-xs">{wo.id}</span>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${
+                          wo.priority === 'critical' ? 'bg-rose-500/20 text-rose-400 border-rose-500/40' : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                        }`}>
+                          {wo.priority || 'medium'} Priority
+                        </span>
+                      </div>
+
+                      <h4 className="text-sm font-bold text-white">{wo.title || 'Work Order Task'}</h4>
+                      <p className="text-xs text-gray-400">{wo.description || ''}</p>
+
+                      <div className="flex items-center gap-4 text-[11px] text-gray-400 pt-1">
+                        <span>Asset: <strong className="text-gray-200">{wo.asset_name || wo.asset_tag || 'Plant Machinery'}</strong></span>
+                        <span>Assigned to: <strong className="text-gray-200">{wo.assigned_to_name || 'Technician'}</strong></span>
+                        <span>Due: <strong className="text-white font-mono">{wo.due_date ? new Date(wo.due_date).toLocaleDateString() : 'Asap'}</strong></span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold font-mono uppercase border ${
+                        statusStr === 'completed' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
+                        statusStr === 'in_progress' ? 'bg-accent-cyan/20 text-accent-cyan border-accent-cyan/40' :
+                        'bg-amber-500/20 text-amber-400 border-amber-500/40'
                       }`}>
-                        {wo.priority} Priority
+                        {statusStr.replace(/_/g, ' ')}
                       </span>
-                    </div>
 
-                    <h4 className="text-sm font-bold text-white">{wo.title}</h4>
-                    <p className="text-xs text-gray-400">{wo.description}</p>
-
-                    <div className="flex items-center gap-4 text-[11px] text-gray-400 pt-1">
-                      <span>Asset: <strong className="text-gray-200">{wo.asset_name || wo.asset_tag}</strong></span>
-                      <span>Assigned to: <strong className="text-gray-200">{wo.assigned_to_name || 'Technician'}</strong></span>
-                      <span>Due: <strong className="text-white font-mono">{wo.due_date ? new Date(wo.due_date).toLocaleDateString() : 'Asap'}</strong></span>
+                      <Link
+                        to={`/work-orders/${wo.id}`}
+                        className="px-3 py-1.5 bg-industrial-800 hover:bg-industrial-700 text-gray-200 rounded-lg text-xs font-bold transition-colors"
+                      >
+                        Manage →
+                      </Link>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold font-mono uppercase border ${
-                      wo.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
-                      wo.status === 'in_progress' ? 'bg-accent-cyan/20 text-accent-cyan border-accent-cyan/40' :
-                      'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                    }`}>
-                      {wo.status.replace('_', ' ')}
-                    </span>
-
-                    <Link
-                      to={`/work-orders/${wo.id}`}
-                      className="px-3 py-1.5 bg-industrial-800 hover:bg-industrial-700 text-gray-200 rounded-lg text-xs font-bold transition-colors"
-                    >
-                      Manage →
-                    </Link>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </main>

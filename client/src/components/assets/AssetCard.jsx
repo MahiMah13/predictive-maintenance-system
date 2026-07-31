@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, AlertTriangle, ShieldCheck, Sparkles, MapPin, Wrench } from 'lucide-react';
+import { Activity, MapPin, Sparkles } from 'lucide-react';
 
 export default function AssetCard({ asset }) {
+  if (!asset) return null;
+
   const getCriticalityColor = (tier) => {
     switch (tier) {
       case 'critical': return 'bg-rose-500/10 text-rose-400 border-rose-500/30';
@@ -21,34 +23,36 @@ export default function AssetCard({ asset }) {
     }
   };
 
-  const riskScore = asset.risk_score || (asset.lifecycle_status === 'degraded' ? 84 : 25);
+  const statusStr = asset.lifecycle_status || 'operational';
+  const criticalityStr = asset.criticality_tier || 'medium';
+  const riskScore = asset.risk_score || (statusStr === 'degraded' ? 84 : 25);
 
   return (
     <div className="glass-panel rounded-2xl p-5 hover:border-accent-cyan/40 transition-all duration-300 flex flex-col justify-between group shadow-xl">
       <div>
         <div className="flex items-center justify-between gap-2 mb-3">
           <span className="font-mono text-[11px] font-bold text-accent-cyan bg-accent-cyan/10 px-2.5 py-1 rounded-md border border-accent-cyan/20">
-            {asset.asset_tag}
+            {asset.asset_tag || 'AST-N/A'}
           </span>
           <div className="flex items-center gap-2">
-            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${getCriticalityColor(asset.criticality_tier)}`}>
-              {asset.criticality_tier}
+            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${getCriticalityColor(criticalityStr)}`}>
+              {criticalityStr}
             </span>
-            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${getStatusColor(asset.lifecycle_status)}`}>
-              {asset.lifecycle_status.replace('_', ' ')}
+            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${getStatusColor(statusStr)}`}>
+              {statusStr.replace(/_/g, ' ')}
             </span>
           </div>
         </div>
 
         <Link to={`/assets/${asset.id}`} className="block">
           <h4 className="text-base font-bold text-white group-hover:text-accent-cyan transition-colors mb-1">
-            {asset.name}
+            {asset.name || 'Industrial Machine'}
           </h4>
         </Link>
 
         <p className="text-xs text-gray-400 mb-3 flex items-center gap-1.5">
           <MapPin className="w-3.5 h-3.5 text-gray-500" />
-          <span>{asset.location}</span>
+          <span>{asset.location || 'Main Factory Bay'}</span>
         </p>
 
         <div className="bg-industrial-900/80 p-3 rounded-xl border border-industrial-border mb-4">
@@ -67,7 +71,7 @@ export default function AssetCard({ asset }) {
               className={`h-full rounded-full transition-all duration-500 ${
                 riskScore > 75 ? 'bg-gradient-to-r from-amber-500 to-rose-500' : riskScore > 50 ? 'bg-amber-400' : 'bg-emerald-400'
               }`}
-              style={{ width: `${riskScore}%` }}
+              style={{ width: `${Math.min(100, Math.max(0, riskScore))}%` }}
             ></div>
           </div>
         </div>

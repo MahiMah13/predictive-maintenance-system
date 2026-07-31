@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpDown, ExternalLink, Sparkles, AlertTriangle, ShieldCheck, MapPin } from 'lucide-react';
+import { ArrowUpDown, ExternalLink, Sparkles, MapPin } from 'lucide-react';
 
 export default function AssetTable({ assets = [] }) {
   const [sortField, setSortField] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
+
+  const safeAssets = Array.isArray(assets) ? assets.filter(Boolean) : [];
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -15,12 +17,12 @@ export default function AssetTable({ assets = [] }) {
     }
   };
 
-  const sortedAssets = [...assets].sort((a, b) => {
-    let aVal = a[sortField];
-    let bVal = b[sortField];
+  const sortedAssets = [...safeAssets].sort((a, b) => {
+    let aVal = a?.[sortField] || '';
+    let bVal = b?.[sortField] || '';
     if (sortField === 'risk_score') {
-      aVal = a.risk_score || (a.lifecycle_status === 'degraded' ? 84 : 25);
-      bVal = b.risk_score || (b.lifecycle_status === 'degraded' ? 84 : 25);
+      aVal = a?.risk_score || (a?.lifecycle_status === 'degraded' ? 84 : 25);
+      bVal = b?.risk_score || (b?.lifecycle_status === 'degraded' ? 84 : 25);
     }
     if (typeof aVal === 'string') aVal = aVal.toLowerCase();
     if (typeof bVal === 'string') bVal = bVal.toLowerCase();
@@ -71,40 +73,43 @@ export default function AssetTable({ assets = [] }) {
         </thead>
         <tbody className="divide-y divide-industrial-border text-gray-200">
           {sortedAssets.map((asset) => {
-            const risk = asset.risk_score || (asset.lifecycle_status === 'degraded' ? 84 : 25);
+            if (!asset) return null;
+            const statusStr = asset.lifecycle_status || 'operational';
+            const criticalityStr = asset.criticality_tier || 'medium';
+            const risk = asset.risk_score || (statusStr === 'degraded' ? 84 : 25);
             return (
               <tr key={asset.id} className="hover:bg-industrial-700/50 transition-colors">
                 <td className="py-3.5 px-4 font-mono font-bold text-accent-cyan">
-                  {asset.asset_tag}
+                  {asset.asset_tag || 'AST-N/A'}
                 </td>
                 <td className="py-3.5 px-4">
                   <Link to={`/assets/${asset.id}`} className="font-bold text-white hover:text-accent-cyan transition-colors block">
-                    {asset.name}
+                    {asset.name || 'Industrial Equipment'}
                   </Link>
-                  <span className="text-[10px] text-gray-400">{asset.category} • {asset.manufacturer}</span>
+                  <span className="text-[10px] text-gray-400">{asset.category || 'Machinery'} • {asset.manufacturer || 'OEM'}</span>
                 </td>
                 <td className="py-3.5 px-4 text-gray-400">
                   <div className="flex items-center gap-1">
                     <MapPin className="w-3 h-3 text-gray-500" />
-                    <span>{asset.location}</span>
+                    <span>{asset.location || 'Plant Floor'}</span>
                   </div>
                 </td>
                 <td className="py-3.5 px-4">
                   <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                    asset.criticality_tier === 'critical' ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' :
-                    asset.criticality_tier === 'high' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                    criticalityStr === 'critical' ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' :
+                    criticalityStr === 'high' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
                     'bg-blue-500/10 text-blue-400 border-blue-500/30'
                   }`}>
-                    {asset.criticality_tier}
+                    {criticalityStr}
                   </span>
                 </td>
                 <td className="py-3.5 px-4">
                   <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                    asset.lifecycle_status === 'operational' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                    asset.lifecycle_status === 'degraded' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                    statusStr === 'operational' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                    statusStr === 'degraded' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
                     'bg-rose-500/20 text-rose-400 border-rose-500/30'
                   }`}>
-                    {asset.lifecycle_status.replace('_', ' ')}
+                    {statusStr.replace(/_/g, ' ')}
                   </span>
                 </td>
                 <td className="py-3.5 px-4">
@@ -114,7 +119,7 @@ export default function AssetTable({ assets = [] }) {
                         className={`h-full rounded-full ${
                           risk > 75 ? 'bg-rose-500' : risk > 50 ? 'bg-amber-400' : 'bg-emerald-400'
                         }`}
-                        style={{ width: `${risk}%` }}
+                        style={{ width: `${Math.min(100, Math.max(0, risk))}%` }}
                       ></div>
                     </div>
                     <span className={`font-mono font-bold ${

@@ -4,7 +4,7 @@ import Sidebar from '../components/shared/Sidebar';
 import AssetTable from '../components/assets/AssetTable';
 import AssetCard from '../components/assets/AssetCard';
 import { assetAPI } from '../services/api';
-import { Boxes, Plus, Search, Filter, LayoutGrid, List } from 'lucide-react';
+import { Boxes, Plus, Search, LayoutGrid, List } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function AssetRegistryPage() {
@@ -18,13 +18,15 @@ export default function AssetRegistryPage() {
     async function loadAssets() {
       try {
         const res = await assetAPI.getAssets({ search, category: categoryFilter, criticality: criticalityFilter });
-        setAssets(res.data);
+        setAssets(Array.isArray(res?.data) ? res.data : []);
       } catch (err) {
         console.warn("Error loading assets:", err);
       }
     }
     loadAssets();
   }, [search, categoryFilter, criticalityFilter]);
+
+  const safeAssets = Array.isArray(assets) ? assets.filter(Boolean) : [];
 
   return (
     <div className="min-h-screen bg-industrial-900 flex flex-col">
@@ -103,10 +105,10 @@ export default function AssetRegistryPage() {
 
           {/* Asset List Content */}
           {viewMode === 'table' ? (
-            <AssetTable assets={assets} />
+            <AssetTable assets={safeAssets} />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {assets.map((asset) => (
+              {safeAssets.map((asset) => (
                 <AssetCard key={asset.id} asset={asset} />
               ))}
             </div>
