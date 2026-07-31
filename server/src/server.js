@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 5001;
 // Security & Parsing Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: true,
   credentials: true
 }));
 app.use(express.json());
