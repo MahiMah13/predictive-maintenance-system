@@ -4,7 +4,7 @@ import Sidebar from '../components/shared/Sidebar';
 import FleetHealthDashboard from '../components/analytics/FleetHealthDashboard';
 import AssetCard from '../components/assets/AssetCard';
 import { assetAPI, analyticsAPI, maintenanceAPI } from '../services/api';
-import { Activity, Sparkles, AlertTriangle, ClipboardList, Plus, ArrowUpRight } from 'lucide-react';
+import { Activity, Sparkles, AlertTriangle, ClipboardList, Plus, ArrowUpRight, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function DashboardPage() {
@@ -23,10 +23,10 @@ export default function DashboardPage() {
           analyticsAPI.getDowntimeTrends(),
           maintenanceAPI.getWorkOrders({ status: 'in_progress' })
         ]);
-        setAssets(assetRes.data);
-        setFleetHealth(healthRes.data);
-        setDowntimeData(downtimeRes.data);
-        setWorkOrders(woRes.data);
+        setAssets(Array.isArray(assetRes?.data) ? assetRes.data : []);
+        setFleetHealth(healthRes?.data || null);
+        setDowntimeData(downtimeRes?.data || null);
+        setWorkOrders(Array.isArray(woRes?.data) ? woRes.data : []);
       } catch (err) {
         console.warn("Error fetching dashboard telemetry:", err);
       } finally {
@@ -36,7 +36,8 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
-  const highRiskAssets = assets.filter(a => a.lifecycle_status === 'degraded' || (a.risk_score && a.risk_score > 70));
+  const safeAssets = Array.isArray(assets) ? assets : [];
+  const safeWorkOrders = Array.isArray(workOrders) ? workOrders : [];
 
   return (
     <div className="min-h-screen bg-industrial-900 flex flex-col">
@@ -52,7 +53,7 @@ export default function DashboardPage() {
                 <span className="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider">Operational Baseline Normal</span>
               </div>
               <h1 className="text-2xl font-extrabold text-white tracking-tight">Fleet Reliability & Predictive Intelligence</h1>
-              <p className="text-xs text-gray-400">Monitoring 5 active plant assets, real-time sensor feeds, and Gemini failure risk engines.</p>
+              <p className="text-xs text-gray-400">Monitoring active plant assets, real-time sensor feeds, and Gemini failure risk engines.</p>
             </div>
 
             <div className="flex items-center gap-3">
@@ -84,13 +85,13 @@ export default function DashboardPage() {
                 High-Risk & Degraded Machinery
               </h2>
               <Link to="/assets" className="text-xs text-accent-cyan font-bold hover:underline flex items-center gap-1">
-                <span>View All Assets ({assets.length})</span>
+                <span>View All Assets ({safeAssets.length})</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {assets.slice(0, 3).map((asset) => (
+              {safeAssets.slice(0, 3).map((asset) => (
                 <AssetCard key={asset.id} asset={asset} />
               ))}
             </div>
@@ -101,7 +102,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <ClipboardList className="w-4 h-4 text-accent-amber" />
-                Active Maintenance Work Orders ({workOrders.length})
+                Active Maintenance Work Orders ({safeWorkOrders.length})
               </h3>
               <Link to="/schedule" className="text-xs text-accent-cyan font-bold hover:underline">
                 View Schedule →
@@ -109,7 +110,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-2">
-              {workOrders.map((wo) => (
+              {safeWorkOrders.map((wo) => (
                 <div key={wo.id} className="bg-industrial-900/80 p-3.5 rounded-xl border border-industrial-border flex items-center justify-between text-xs">
                   <div>
                     <span className="font-mono text-accent-cyan font-bold mr-2">{wo.id}</span>
@@ -117,7 +118,7 @@ export default function DashboardPage() {
                     <span className="text-gray-400 block text-[11px] mt-0.5">{wo.description}</span>
                   </div>
                   <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/40">
-                    {wo.status.replace('_', ' ')}
+                    {(wo.status || 'scheduled').replace('_', ' ')}
                   </span>
                 </div>
               ))}

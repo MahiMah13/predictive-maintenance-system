@@ -16,9 +16,9 @@ import { Link } from 'react-router-dom';
 
 export default function FleetHealthDashboard({ fleetHealth, downtimeData }) {
   const statusPieData = [
-    { name: 'Operational', value: fleetHealth?.status_counts?.operational || 3, color: '#10b981' },
-    { name: 'Degraded', value: fleetHealth?.status_counts?.degraded || 1, color: '#f59e0b' },
-    { name: 'Under Maintenance', value: fleetHealth?.status_counts?.under_maintenance || 1, color: '#f43f5e' }
+    { name: 'Operational', value: fleetHealth?.status_counts?.operational ?? 3, color: '#10b981' },
+    { name: 'Degraded', value: fleetHealth?.status_counts?.degraded ?? 1, color: '#f59e0b' },
+    { name: 'Under Maintenance', value: fleetHealth?.status_counts?.under_maintenance ?? 1, color: '#f43f5e' }
   ];
 
   const metrics = downtimeData?.metrics || {
@@ -29,7 +29,25 @@ export default function FleetHealthDashboard({ fleetHealth, downtimeData }) {
     mttr_hours: 4.8
   };
 
-  const monthlyTrends = downtimeData?.monthly_trends || [];
+  const costImpact = metrics?.total_cost_impact_usd ?? 70500;
+  const failureCount = metrics?.total_failures ?? 2;
+  const mtbfHours = metrics?.mtbf_hours ?? 1450;
+  const mttrHours = metrics?.mttr_hours ?? 4.8;
+
+  const monthlyTrends = downtimeData?.monthly_trends || [
+    { month: 'Jan', downtime_hours: 14, cost_usd: 12000 },
+    { month: 'Feb', downtime_hours: 8, cost_usd: 7500 },
+    { month: 'Mar', downtime_hours: 22, cost_usd: 31000 },
+    { month: 'Apr', downtime_hours: 12.2, cost_usd: 42500 },
+    { month: 'May', downtime_hours: 6, cost_usd: 5400 },
+    { month: 'Jun', downtime_hours: 15, cost_usd: 28000 },
+    { month: 'Jul', downtime_hours: 27.2, cost_usd: 70500 }
+  ];
+
+  const leaderboard = fleetHealth?.leaderboard || [
+    { asset_id: 'ast-30001-pump-101', asset_tag: 'PUMP-101-A', name: 'Main Boiler Feed Water Pump P-101', category: 'Rotating Equipment', criticality: 'critical', risk_score: 84, predicted_failure_mode: 'Drive-End Bearing Failure' },
+    { asset_id: 'ast-30003-press-200', asset_tag: 'PRESS-200-MAIN', name: '500-Ton Hydraulic Stamping Press HP-200', category: 'Production Line Machinery', criticality: 'critical', risk_score: 72, predicted_failure_mode: 'Hydraulic Ram Seal Decay' }
+  ];
 
   return (
     <div className="space-y-6">
@@ -49,7 +67,7 @@ export default function FleetHealthDashboard({ fleetHealth, downtimeData }) {
             <span>Mean Time Between Failures (MTBF)</span>
             <Clock className="w-4 h-4 text-accent-cyan" />
           </div>
-          <div className="text-2xl font-black text-accent-cyan font-mono">{metrics.mtbf_hours} Hours</div>
+          <div className="text-2xl font-black text-accent-cyan font-mono">{mtbfHours} Hours</div>
           <div className="text-[10px] text-gray-400 mt-1">Fleet reliability benchmark</div>
         </div>
 
@@ -58,7 +76,7 @@ export default function FleetHealthDashboard({ fleetHealth, downtimeData }) {
             <span>Mean Time To Repair (MTTR)</span>
             <Activity className="w-4 h-4 text-accent-amber" />
           </div>
-          <div className="text-2xl font-black text-accent-amber font-mono">{metrics.mttr_hours} Hours</div>
+          <div className="text-2xl font-black text-accent-amber font-mono">{mttrHours} Hours</div>
           <div className="text-[10px] text-gray-400 mt-1">Average corrective duration</div>
         </div>
 
@@ -67,8 +85,8 @@ export default function FleetHealthDashboard({ fleetHealth, downtimeData }) {
             <span>Unplanned Downtime Cost</span>
             <DollarSign className="w-4 h-4 text-rose-400" />
           </div>
-          <div className="text-2xl font-black text-rose-400 font-mono">${metrics.total_cost_impact_usd.toLocaleString()}</div>
-          <div className="text-[10px] text-rose-400 mt-1 font-semibold">{metrics.total_failures} breakdown events logged</div>
+          <div className="text-2xl font-black text-rose-400 font-mono">${Number(costImpact).toLocaleString()}</div>
+          <div className="text-[10px] text-rose-400 mt-1 font-semibold">{failureCount} breakdown events logged</div>
         </div>
       </div>
 
@@ -157,7 +175,7 @@ export default function FleetHealthDashboard({ fleetHealth, downtimeData }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-industrial-border">
-              {(fleetHealth?.leaderboard || []).map((row) => (
+              {leaderboard.map((row) => (
                 <tr key={row.asset_id} className="hover:bg-industrial-700/40 transition-colors">
                   <td className="py-3 px-4 font-bold text-white">
                     <div className="font-mono text-accent-cyan">{row.asset_tag}</div>
