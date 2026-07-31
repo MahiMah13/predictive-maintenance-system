@@ -68,7 +68,7 @@ export default function RegisterPage() {
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="sarah.jenkins@apexmanufacturing.com"
+                placeholder="engineer@yourcompany.com"
                 className="w-full bg-industrial-900 border border-industrial-border rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent-cyan"
               />
             </div>
@@ -111,7 +111,7 @@ export default function RegisterPage() {
                 required
                 value={formData.organization_name}
                 onChange={(e) => setFormData({ ...formData, organization_name: e.target.value })}
-                placeholder="Apex Manufacturing"
+                placeholder="e.g. Apex Industrial Plant"
                 className="w-full bg-industrial-900 border border-industrial-border rounded-xl px-3 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent-cyan"
               />
             </div>

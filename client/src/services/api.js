@@ -16,8 +16,8 @@ api.interceptors.request.use(config => {
   return config;
 }, error => Promise.reject(error));
 
-// Fallback Industrial Demo Seed Store for Vercel / Offline Deployments
-const mockAssets = [
+// Local Storage asset persistence helper
+const initialSeedAssets = [
   {
     id: 'ast-30001-pump-101',
     asset_tag: 'PUMP-101-A',
@@ -65,41 +65,67 @@ const mockAssets = [
   }
 ];
 
+const getStoredAssets = () => {
+  const saved = localStorage.getItem('pm_user_assets');
+  if (saved) {
+    try { return JSON.parse(saved); } catch (e) { /* fallback */ }
+  }
+  return initialSeedAssets;
+};
+
+const saveAssets = (assets) => {
+  localStorage.setItem('pm_user_assets', JSON.stringify(assets));
+};
+
 export const authAPI = {
   login: async (credentials) => {
     try {
       return await api.post('/auth/login', credentials);
     } catch (err) {
-      return {
-        data: {
-          token: 'dev-token-' + Date.now(),
-          user: { id: 'usr-20001', full_name: 'Dr. Sarah Jenkins', email: credentials.email || 'sarah.jenkins@apexmanufacturing.com', role: 'reliability_engineer', organization_id: 'org-10001' },
-          organization: { id: 'org-10001', name: 'Apex Precision Manufacturing Inc.' }
-        }
+      const email = credentials.email || 'engineer@company.com';
+      const domainName = email.includes('@') ? email.split('@')[1].split('.')[0] : 'Plant';
+      const orgName = domainName.charAt(0).toUpperCase() + domainName.slice(1) + ' Industrial Plant';
+      
+      const user = {
+        id: 'usr-' + Date.now(),
+        full_name: email.split('@')[0].replace('.', ' '),
+        email: email,
+        role: 'reliability_engineer',
+        organization_id: 'org-' + domainName
       };
+      const org = { id: 'org-' + domainName, name: orgName };
+
+      return { data: { token: 'token-' + Date.now(), user, organization: org } };
     }
   },
   register: async (userData) => {
     try {
       return await api.post('/auth/register', userData);
     } catch (err) {
-      return {
-        data: {
-          token: 'dev-token-' + Date.now(),
-          user: { id: 'usr-' + Date.now(), full_name: userData.full_name, email: userData.email, role: userData.role || 'reliability_engineer', organization_id: 'org-10001' },
-          organization: { id: 'org-10001', name: userData.organization_name || 'Apex Precision Manufacturing Inc.' }
-        }
+      const user = {
+        id: 'usr-' + Date.now(),
+        full_name: userData.full_name,
+        email: userData.email,
+        role: userData.role || 'reliability_engineer',
+        organization_id: 'org-' + Date.now()
       };
+      const org = {
+        id: 'org-' + Date.now(),
+        name: userData.organization_name || 'My Industrial Plant'
+      };
+      return { data: { token: 'token-' + Date.now(), user, organization: org } };
     }
   },
   getProfile: async () => {
     try {
       return await api.get('/auth/profile');
     } catch (err) {
+      const savedUser = localStorage.getItem('pm_user');
+      const savedOrg = localStorage.getItem('pm_org');
       return {
         data: {
-          user: { id: 'usr-20001', full_name: 'Dr. Sarah Jenkins', email: 'sarah.jenkins@apexmanufacturing.com', role: 'reliability_engineer', organization_id: 'org-10001' },
-          organization: { id: 'org-10001', name: 'Apex Precision Manufacturing Inc.' }
+          user: savedUser ? JSON.parse(savedUser) : { id: 'usr-1', full_name: 'Lead Engineer', email: 'engineer@company.com', role: 'reliability_engineer' },
+          organization: savedOrg ? JSON.parse(savedOrg) : { id: 'org-1', name: 'Industrial Plant Operations' }
         }
       };
     }
@@ -108,7 +134,7 @@ export const authAPI = {
     try {
       return await api.put('/auth/profile', data);
     } catch (err) {
-      return { data: { id: 'usr-20001', full_name: data.full_name || 'Dr. Sarah Jenkins', role: data.role || 'reliability_engineer' } };
+      return { data: { id: 'usr-1', ...data } };
     }
   }
 };
@@ -118,14 +144,30 @@ export const assetAPI = {
     try {
       return await api.get('/assets', { params });
     } catch (err) {
-      return { data: mockAssets };
+      let assets = getStoredAssets();
+      if (params?.category) {
+        assets = assets.filter(a => a.category.toLowerCase() === params.category.toLowerCase());
+      }
+      if (params?.criticality) {
+        assets = assets.filter(a => a.criticality_tier === params.criticality);
+      }
+      if (params?.search) {
+        const q = params.search.toLowerCase();
+        assets = assets.filter(a => 
+          a.name.toLowerCase().includes(q) || 
+          a.asset_tag.toLowerCase().includes(q) || 
+          a.location.toLowerCase().includes(q)
+        );
+      }
+      return { data: assets };
     }
   },
   getAssetById: async (id) => {
     try {
       return await api.get(`/assets/${id}`);
     } catch (err) {
-      const found = mockAssets.find(a => a.id === id) || mockAssets[0];
+      const assets = getStoredAssets();
+      const found = assets.find(a => a.id === id) || assets[0];
       return {
         data: {
           ...found,
@@ -147,8 +189,16 @@ export const assetAPI = {
     try {
       return await api.post('/assets', data);
     } catch (err) {
-      const newAsset = { id: `ast-${Date.now()}`, ...data, risk_score: 25, lifecycle_status: 'operational' };
-      mockAssets.unshift(newAsset);
+      const assets = getStoredAssets();
+      const newAsset = { 
+        id: `ast-${Date.now()}`, 
+        ...data, 
+        risk_score: 25, 
+        lifecycle_status: data.lifecycle_status || 'operational',
+        install_date: data.install_date || new Date().toISOString().split('T')[0]
+      };
+      assets.unshift(newAsset);
+      saveAssets(assets);
       return { data: newAsset };
     }
   },
@@ -156,6 +206,12 @@ export const assetAPI = {
     try {
       return await api.put(`/assets/${id}`, data);
     } catch (err) {
+      const assets = getStoredAssets();
+      const idx = assets.findIndex(a => a.id === id);
+      if (idx !== -1) {
+        assets[idx] = { ...assets[idx], ...data };
+        saveAssets(assets);
+      }
       return { data: { id, ...data } };
     }
   },
@@ -163,6 +219,8 @@ export const assetAPI = {
     try {
       return await api.delete(`/assets/${id}`);
     } catch (err) {
+      const assets = getStoredAssets().filter(a => a.id !== id);
+      saveAssets(assets);
       return { data: { id, is_archived: true } };
     }
   },
@@ -277,9 +335,12 @@ export const aiAPI = {
     try {
       return await api.post(`/ai/assets/${assetId}/failure-prediction`);
     } catch (err) {
+      const assets = getStoredAssets();
+      const targetAsset = assets.find(a => a.id === assetId) || assets[0];
+      
       const pred = {
-        risk_score: 84,
-        predicted_failure_mode: 'Drive-End Bearing Failure & Thermal Spalling',
+        risk_score: targetAsset?.risk_score || 84,
+        predicted_failure_mode: `${targetAsset?.name || 'Machine'} Drive-End Degradation`,
         confidence_level: 'high',
         recommended_horizon_days: 5,
         contributing_factors: [
@@ -288,7 +349,7 @@ export const aiAPI = {
           { factor: 'Cumulative Operating Hours', evidence: '14,250 operating hours accumulated since last major overhaul.', weight: 'medium' }
         ],
         assumptions: [
-          'Pump operates under continuous 100% duty cycle (24/7).',
+          'Asset operates under continuous 100% duty cycle (24/7).',
           'Vibration acceleration trend continues at current +0.28 mm/s per day trajectory.',
           'Ambient machine room temperature stays below 30°C.'
         ],
@@ -303,8 +364,8 @@ export const aiAPI = {
           id: `pred-${Date.now()}`,
           asset_id: assetId,
           prediction_type: 'failure_prediction',
-          risk_score: 84,
-          predicted_failure_mode: 'Drive-End Bearing Failure & Thermal Spalling',
+          risk_score: pred.risk_score,
+          predicted_failure_mode: pred.predicted_failure_mode,
           confidence_level: 'high',
           assumptions: pred.assumptions,
           contributing_factors: pred.contributing_factors,
@@ -319,6 +380,9 @@ export const aiAPI = {
     try {
       return await api.post(`/ai/assets/${assetId}/rul-estimate`);
     } catch (err) {
+      const assets = getStoredAssets();
+      const targetAsset = assets.find(a => a.id === assetId) || assets[0];
+
       return {
         data: {
           id: `rul-${Date.now()}`,
@@ -330,7 +394,7 @@ export const aiAPI = {
             rul_estimate_hours: 120,
             confidence_interval_hours: { min_hours: 90, max_hours: 150 },
             confidence_level: 'high',
-            primary_degradation_mechanism: 'Rolling Element Spalling & Micro-fatigue in Race Surface',
+            primary_degradation_mechanism: `Micro-fatigue in ${targetAsset?.name || 'Machine'} race surface`,
             inspection_frequency_recommendation: 'Daily vibration screening & acoustic thermography scan'
           }
         }
@@ -342,6 +406,9 @@ export const aiAPI = {
     try {
       return await api.post(`/ai/assets/${assetId}/recommendations`);
     } catch (err) {
+      const assets = getStoredAssets();
+      const targetAsset = assets.find(a => a.id === assetId) || assets[0];
+
       return {
         data: {
           id: `rec-${Date.now()}`,
@@ -349,12 +416,12 @@ export const aiAPI = {
           status: 'pending',
           confidence_level: 'high',
           recommendations: [
-            { priority: 'P1 - Immediate Action', action: 'Schedule emergency bearing replacement & precision laser alignment within 72h.', justification: 'Vibration of 6.8 mm/s exceeds ISO 10816 Class III limit (4.5 mm/s).', estimated_duration_hours: 6, required_skills: 'Category II Vibration Analyst / Millwright' },
+            { priority: 'P1 - Immediate Action', action: `Schedule emergency maintenance & precision alignment on ${targetAsset?.name || 'Machine'}.`, justification: 'Current vibration level exceeds ISO 10816 Class III limit (4.5 mm/s).', estimated_duration_hours: 6, required_skills: 'Category II Vibration Analyst / Millwright' },
             { priority: 'P2 - Preventive Maintenance', action: 'Flush oil reservoir and replace synthetic ISO VG 68 lubricant.', justification: 'Thermal decomposition of lubricant reduces film thickness.', estimated_duration_hours: 2, required_skills: 'Maintenance Technician' }
           ],
           assumptions: [
             'Physical machine condition verified via local visual inspection prior to work order execution.',
-            'Spare SKF 6314 bearing and synthetic lubricant are available in plant store.',
+            'Spare replacement bearing and synthetic lubricant are available in plant store.',
             'Tag-out / Lock-out (LOTO) clearance can be granted during planned shift window.'
           ]
         }
@@ -371,7 +438,7 @@ export const aiAPI = {
           message: "Recommendation accepted and Work Order automatically created",
           created_work_order: {
             id: `wo-ai-${Date.now()}`,
-            title: "AI Work Plan: Emergency Bearing Replacement",
+            title: "AI Work Plan: Emergency Machine Overhaul",
             status: "scheduled"
           }
         }
@@ -397,10 +464,9 @@ export const aiAPI = {
           assistant_message: {
             id: `msg-${Date.now()}-a`,
             role: 'assistant',
-            content: `Based on plant OEM manuals & reliability standards:\n\n1. **Diagnostic Evaluation**: The reported condition indicates mechanical strain on drive-end bearings. RMS vibration of 6.8 mm/s exceeds ISO 10816 Class III limit (4.5 mm/s).\n2. **Lube & Thermal Protocol**: Housing temperature of 78.4°C causes lubricant oxidation.\n3. **Corrective Sequence**: Execute Work Order WO-70001 immediately (bearing replacement & laser alignment).`,
+            content: `Based on plant OEM manuals & reliability standards:\n\n1. **Diagnostic Evaluation**: RMS vibration of 6.8 mm/s exceeds ISO 10816 Class III limit (4.5 mm/s).\n2. **Lube & Thermal Protocol**: Operating temperatures above 75°C accelerate lubricant decomposition.\n3. **Corrective Sequence**: Execute planned bearing replacement and laser alignment.`,
             retrieved_sources: [
-              { title: 'Sulzer MSD Pump OEM Manual Section 4 - Vibration Analysis', storage_path: '/docs/sulzer_msd_manual.pdf' },
-              { title: 'Failure Event FL-50001 Log', storage_path: '/failures/fl-50001' }
+              { title: 'Plant OEM Maintenance Manual Section 4 - Vibration Analysis', storage_path: '/docs/oem_manual.pdf' }
             ]
           }
         }
@@ -412,22 +478,25 @@ export const aiAPI = {
     try {
       return await api.post('/ai/planner/run');
     } catch (err) {
+      const assets = getStoredAssets();
+      const highRisk = assets.find(a => a.risk_score > 70) || assets[0];
+
       return {
         data: {
           id: `plan-${Date.now()}`,
-          diagnostics_output: { flagged_assets: ['ast-30001-pump-101'], status: 'COMPLETE' },
-          risk_output: { ranked_risk: [{ asset_id: 'ast-30001-pump-101', risk_score: 84 }] },
-          scheduling_output: { proposed_schedule: [{ asset_id: 'ast-30001-pump-101', window: 'Within 48h' }] },
+          diagnostics_output: { flagged_assets: [highRisk.id], status: 'COMPLETE' },
+          risk_output: { ranked_risk: [{ asset_id: highRisk.id, risk_score: highRisk.risk_score || 84 }] },
+          scheduling_output: { proposed_schedule: [{ asset_id: highRisk.id, window: 'Within 48h' }] },
           parts_output: { required_inventory: [{ part_no: 'SKF-6314-C3', stock: 2 }] },
           final_plan: {
             plan_title: 'Fleet Master Predictive Maintenance Operations Plan',
-            executive_summary: 'Multi-agent optimization identified high-risk bearing degradation on P-101 pump. Outage window scheduled within 48h to prevent $70,500 in breakdown losses.',
+            executive_summary: `Multi-agent optimization identified high-risk degradation on ${highRisk.name}. Outage window scheduled within 48h to prevent breakdown losses.`,
             total_estimated_downtime_hours: 10,
             projected_roi_usd: '69,225',
             action_items: [
-              'Approve Work Order WO-70001 for Pump P-101 bearing replacement within 48h.',
-              'Issue Purchase Order for SCH-SEAL-KIT-500T for Press HP-200.',
-              'Notify Assembly Line Supervisor of 6-hour maintenance window on Thursday 02:00 AM.'
+              `Approve Work Order for ${highRisk.name} overhaul within 48h.`,
+              'Issue Purchase Order for replacement high-temp seal set.',
+              'Notify Plant Supervisor of 6-hour maintenance window.'
             ]
           }
         }
@@ -441,16 +510,33 @@ export const analyticsAPI = {
     try {
       return await api.get('/analytics/fleet-health');
     } catch (err) {
+      const assets = getStoredAssets();
+      const highRisk = assets.filter(a => (a.risk_score || 0) > 70);
       return {
         data: {
-          total_assets: 5,
-          high_risk_count: 1,
-          status_counts: { operational: 3, degraded: 1, under_maintenance: 1, decommissioned: 0 },
-          criticality_counts: { critical: 2, high: 2, medium: 1, low: 0 },
-          leaderboard: [
-            { asset_id: 'ast-30001-pump-101', asset_tag: 'PUMP-101-A', name: 'Main Boiler Feed Water Pump P-101', category: 'Rotating Equipment', criticality: 'critical', risk_score: 84, predicted_failure_mode: 'Drive-End Bearing Failure' },
-            { asset_id: 'ast-30003-press-200', asset_tag: 'PRESS-200-MAIN', name: '500-Ton Hydraulic Stamping Press HP-200', category: 'Production Line Machinery', criticality: 'critical', risk_score: 72, predicted_failure_mode: 'Hydraulic Ram Seal Decay' }
-          ]
+          total_assets: assets.length,
+          high_risk_count: highRisk.length,
+          status_counts: {
+            operational: assets.filter(a => a.lifecycle_status === 'operational').length,
+            degraded: assets.filter(a => a.lifecycle_status === 'degraded').length,
+            under_maintenance: assets.filter(a => a.lifecycle_status === 'under_maintenance').length,
+            decommissioned: 0
+          },
+          criticality_counts: {
+            critical: assets.filter(a => a.criticality_tier === 'critical').length,
+            high: assets.filter(a => a.criticality_tier === 'high').length,
+            medium: assets.filter(a => a.criticality_tier === 'medium').length,
+            low: assets.filter(a => a.criticality_tier === 'low').length
+          },
+          leaderboard: assets.map(a => ({
+            asset_id: a.id,
+            asset_tag: a.asset_tag,
+            name: a.name,
+            category: a.category,
+            criticality: a.criticality_tier,
+            risk_score: a.risk_score || 25,
+            predicted_failure_mode: a.risk_score > 70 ? 'Drive-End Bearing Degradation' : 'Nominal Operational State'
+          })).sort((a, b) => b.risk_score - a.risk_score)
         }
       };
     }
@@ -485,7 +571,7 @@ export const knowledgeAPI = {
     } catch (err) {
       return {
         data: [
-          { id: 'doc-1', title: 'Sulzer MSD 6x10x13 OEM Maintenance Manual', document_type: 'manual', storage_path: '/docs/sulzer_msd_manual.pdf' }
+          { id: 'doc-1', title: 'Plant OEM Maintenance Manual & Reliability Guidelines', document_type: 'manual', storage_path: '/docs/oem_manual.pdf' }
         ]
       };
     }

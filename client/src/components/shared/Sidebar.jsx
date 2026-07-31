@@ -24,8 +24,8 @@ export default function Sidebar() {
   ];
 
   const aiItems = [
-    { label: 'Failure Prediction', path: '/ai/failure-prediction/ast-30001-pump-101', icon: Sparkles },
-    { label: 'RUL Estimator', path: '/ai/rul/ast-30001-pump-101', icon: Clock },
+    { label: 'Failure Prediction', path: '/ai/failure-prediction/default', icon: Sparkles },
+    { label: 'RUL Estimator', path: '/ai/rul/default', icon: Clock },
     { label: 'AI Engineer (RAG Chat)', path: '/ai/maintenance-engineer', icon: Bot },
     { label: 'Multi-Agent Planner', path: '/ai/planner', icon: Workflow },
   ];

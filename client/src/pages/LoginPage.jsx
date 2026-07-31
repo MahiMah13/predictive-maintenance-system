@@ -48,7 +48,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="sarah.jenkins@apexmanufacturing.com"
+                placeholder="engineer@yourcompany.com"
                 className="w-full bg-industrial-900 border border-industrial-border rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent-cyan"
               />
             </div>
