@@ -72,6 +72,16 @@ export async function askAIMaintenanceEngineer(question, assetId = null) {
     }
   }
 
+  // Greeting detection
+  const greetingKeywords = ['hi', 'hello', 'hey', 'good morning', 'good evening', 'who are you', 'what is your name'];
+  const isGreeting = greetingKeywords.some(kw => question.toLowerCase().includes(kw));
+  if (isGreeting) {
+    return {
+      answer: "Hello! I'm your AI Maintenance Engineer, here to help you troubleshoot equipment, analyse telemetry, or look up OEM manuals. How can I assist you today?",
+      retrieved_sources: []
+    };
+  }
+
   // Detect off-topic queries in fallback mode
   const offTopicKeywords = ['weather', 'climate', 'temperature outside', 'rain', 'forecast', 'recipe', 'game', 'sports', 'movie', 'news'];
   const isOffTopic = offTopicKeywords.some(kw => question.toLowerCase().includes(kw));

@@ -68,8 +68,11 @@ export default function Navbar() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
-  const handleNotifClick = (notif) => {
+  const handleNotifClick = (e, notif) => {
+    // Prevent the click from bubbling to the dropdown container which may trigger unwanted UI updates
+    e?.stopPropagation();
     setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+    // Hide the notifications dropdown immediately to avoid showing a loading overlay while navigating
     setShowNotifications(false);
     if (notif.link) {
       navigate(notif.link);
@@ -90,7 +93,7 @@ export default function Navbar() {
           </div>
           <div>
             <span className="font-extrabold text-base tracking-tight text-white block leading-none">
-              ANTIGRAVITY <span className="text-accent-cyan">PREDICTIVE</span>
+              RELIABILITY <span className="text-accent-cyan">PREDICTIVE</span>
             </span>
             <span className="text-[10px] tracking-widest text-gray-400 font-mono uppercase">
               AI Reliability Platform
@@ -162,7 +165,7 @@ export default function Navbar() {
                   notifications.map((notif) => (
                     <div
                       key={notif.id}
-                      onClick={() => handleNotifClick(notif)}
+                      onClick={(e) => handleNotifClick(e, notif)}
                       className={`p-3.5 hover:bg-industrial-800/80 transition-colors cursor-pointer flex gap-3 group relative ${
                         !notif.read ? 'bg-industrial-800/30' : ''
                       }`}

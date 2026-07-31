@@ -15,17 +15,24 @@ node_modules/
 *.env
 !*.env.example
 
-# Local Binary Database Files, Dumps & Backups (SQL migration scripts remain version-controlled)
+# Database Files, Dumps & Backups (SQL migration scripts remain version‑controlled)
 *.db
 *.sqlite
 *.sqlite3
 *.rdb
 *.dump
+*.sql
 *.sql.gz
 *.bak
+database/
 database/dumps/
 database/data/
 database/local/
+
+# Supabase directory – ignore everything except migrations
+supabase/
+!supabase/migrations/
+!supabase/migrations/**/*.sql
 
 # Production Build Outputs
 dist/

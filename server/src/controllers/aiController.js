@@ -38,6 +38,38 @@ export async function triggerFailurePrediction(req, res, next) {
   }
 }
 
+export async function triggerReanalysis(req, res, next) {
+  try {
+    const assetId = req.params.id;
+    const asset = store.assets.find(a => a.id === assetId);
+    if (!asset) return res.status(404).json({ error: 'Asset not found' });
+
+    const sensorReadings = store.sensor_readings.filter(r => r.asset_id === assetId);
+    const maintenanceHistory = store.work_orders.filter(w => w.asset_id === assetId);
+    const failureHistory = store.failure_events.filter(f => f.asset_id === assetId);
+
+    const prediction = await runFailurePrediction(asset, sensorReadings, maintenanceHistory, failureHistory);
+
+    const newPredRecord = {
+      id: `pred-rean-${Date.now()}`,
+      asset_id: assetId,
+      prediction_type: 'failure_reanalysis',
+      risk_score: prediction.risk_score,
+      predicted_failure_mode: prediction.predicted_failure_mode,
+      confidence_level: prediction.confidence_level,
+      assumptions: prediction.assumptions,
+      contributing_factors: prediction.contributing_factors,
+      raw_ai_response: prediction,
+      generated_by: req.user.id,
+      created_at: new Date().toISOString()
+    };
+    store.ai_predictions.unshift(newPredRecord);
+    res.json(newPredRecord);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function triggerRULEstimate(req, res, next) {
   try {
     const assetId = req.params.id;

@@ -7,7 +7,8 @@ import {
   confirmRecommendation,
   createChatSession,
   postChatMessage,
-  runPlanner
+  runPlanner,
+  triggerReanalysis
 } from '../controllers/aiController.js';
 import { authenticateToken, requireRole } from '../middleware/authMiddleware.js';
 
